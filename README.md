@@ -1,56 +1,79 @@
-# Welcome to your Expo app 👋
+# Ballotwise
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Find the candidates who match your values — on your **actual** ballot.
 
-## Get started
+Ballotwise is a cross-platform (iOS + Android) React Native app built with Expo.
+It walks a voter through:
 
-1. Install dependencies
+1. **Location** — use GPS or type an address.
+2. **Elections** — see the active elections for that address.
+3. **Questionnaire** — a short alignment quiz across 10 policy areas.
+4. **Ballot** — your real ballot, styled like a paper optical-scan ballot, with
+   each candidate **ranked by how well they match your answers**.
+5. **Candidate detail** — an AI-generated neutral summary, a per-issue alignment
+   breakdown, and recommended YouTube videos.
+6. **Chatbot** — ask follow-up questions about any candidate.
 
-   ```bash
-   npm install
-   ```
+## Tech
 
-2. Start the app
+- **Expo SDK 56** / React Native 0.85 / React 19 / TypeScript
+- **Expo Router** (file-based navigation, `src/app/`)
+- **Zustand** + AsyncStorage for persisted state
+- **Google Civic Information API** for elections + ballots (`electionQuery`,
+  `voterInfoQuery`)
+- **Anthropic Claude** for candidate summaries + chatbot (with prompt caching)
+- **YouTube Data API v3** for video recommendations
 
-   ```bash
-   npx expo start
-   ```
+> The app runs fully on **bundled mock data with zero API keys**, so you can
+> develop the entire flow offline. Add keys to switch each feature to live data.
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env   # optional — fill in keys to enable live data
+npm run ios            # or: npm run android / npm run web
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Configuration
 
-### Other setup steps
+All config is read from `EXPO_PUBLIC_*` env vars (see `.env.example`):
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+| Variable | Enables | Notes |
+| --- | --- | --- |
+| `EXPO_PUBLIC_GOOGLE_CIVIC_API_KEY` | Live elections + ballot | Enable "Civic Information API" in Google Cloud |
+| `EXPO_PUBLIC_YOUTUBE_API_KEY` | Video recommendations | YouTube Data API v3 |
+| `EXPO_PUBLIC_ANTHROPIC_API_KEY` | AI summaries + chatbot | **Dev only** — see security note |
+| `EXPO_PUBLIC_AI_PROXY_URL` | AI via your backend | Preferred for production |
+| `EXPO_PUBLIC_ANTHROPIC_MODEL` | Override model | Defaults to `claude-sonnet-4-6` |
 
-## Learn more
+### Security note on the Anthropic key
 
-To learn more about developing your project with Expo, look at the following resources:
+Anything prefixed `EXPO_PUBLIC_` is inlined into the client bundle and is **not
+secret**. That is fine for the Google/YouTube keys (restrict them by app in the
+Google console). For Anthropic, put the key in `.env` for local development
+**only**. For a real release, run a tiny backend that holds the key and set
+`EXPO_PUBLIC_AI_PROXY_URL` to it — `src/services/ai.ts` prefers the proxy when
+set. The proxy should accept `{ system, messages, model }` and return `{ text }`.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Known limitations / roadmap
 
-## Join the community
+- Google's **Representatives API was retired (2025-04-30)**; Ballotwise uses the
+  still-supported Elections + `voterInfoQuery` endpoints.
+- Civic data does not include policy positions, so live candidates' stances are
+  **estimated from party** (clearly labeled in the UI). Swap in a positions
+  provider (Ballotpedia / BallotReady / Vote Smart) in
+  `src/services/stanceEstimation.ts` for real records.
+- Mock candidates are **fictional** by design.
 
-Join our community of developers creating universal apps.
+## Project structure
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+src/
+  app/            # Expo Router screens (location → elections → quiz → ballot → candidate → chat)
+  components/     # BallotCard, MatchBadge, PartyTag, Button, Card, ...
+  data/           # questions.ts (quiz), mockElections.ts (sample data)
+  services/       # civic, elections (provider), matching, ai, youtube, stanceEstimation
+  store/          # Zustand store (persisted)
+  types/          # shared domain types
+```
