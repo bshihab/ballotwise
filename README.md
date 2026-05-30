@@ -16,7 +16,7 @@ It walks a voter through:
 
 ## Tech
 
-- **Expo SDK 56** / React Native 0.85 / React 19 / TypeScript
+- **Expo SDK 55** / React Native 0.83 / React 19 / TypeScript (runs in Expo Go)
 - **Expo Router** (file-based navigation, `src/app/`)
 - **Zustand** + AsyncStorage for persisted state
 - **Google Civic Information API** for elections + ballots (`electionQuery`,
